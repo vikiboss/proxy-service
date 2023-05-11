@@ -1,7 +1,7 @@
 import { serve } from 'https://deno.land/std@0.180.0/http/server.ts'
 
 const md2htmlApi = 'https://markdown2html.deno.dev'
-const markdownContent = Deno.readTextFileSync('./README.md')
+const markdownContent = await Deno.readTextFile('./README.md')
 
 async function handleRequest(request: Request) {
   const url = new URL(request.url)
