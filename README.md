@@ -2,7 +2,7 @@
 
 ## 使用方法
 
-将需要代理的链接的 `host` 换成 `proxy.viki.moe`，并加上 `proxy-host` 参数即可。
+将需要代理的链接的 `host` 换成 `proxy.viki.moe`，并用 `proxy-host` 参数指明原来的 `host` 即可。
 
 ```diff
 - https://example.com/path/to/page?param=value
