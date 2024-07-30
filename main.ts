@@ -27,6 +27,9 @@ async function handleRequest(request: Request) {
   headers.delete('proxy-port')
   headers.delete('proxy-protocol')
 
+  headers.set('Access-Control-Allow-Origin', '*')
+  headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+
   const res = await fetch(url.href, {
     headers,
     method: request.method,
