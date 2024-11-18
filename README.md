@@ -24,9 +24,9 @@
 比如某哈游的原神卡池数据：
 
 ```plain
-https://proxy.viki.moe/hk4e/gacha_info/cn_gf01/gacha/list.json?proxy-host=webstatic.mihoyo.com
+https://proxy.viki.moe/gacha_info/hk4e/cn_gf01/gacha/list.json?proxy-host=operation-webstatic.mihoyo.com
 ```
 
-以上链接将 `webstatic.mihoyo.com` 换成了 `proxy.viki.moe`，并添加 `proxy-host` 指明了原来的 `host`。
+以上链接将 `operation-webstatic.mihoyo.com` 换成了 `proxy.viki.moe`，并添加 `proxy-host` 指明了原来的 `host`。
 
-写这玩意完全是为了应付公司对部分域名的屏蔽策略（逃
+写这玩意完全是为了临时解决公司对部分域名的屏蔽策略（逃

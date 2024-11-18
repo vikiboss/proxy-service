@@ -1,42 +1,43 @@
-import { serve } from 'https://deno.land/std@0.180.0/http/server.ts'
+const md2htmlApi = "https://markdown2html.deno.dev";
+const markdownContent = await Deno.readTextFile("./README.md");
 
-const md2htmlApi = 'https://markdown2html.deno.dev'
-const markdownContent = await Deno.readTextFile('./README.md')
+Deno.serve((request: Request) => {
+	const url = new URL(request.url);
+	const [sp, reqHeaders] = [url.searchParams, request.headers];
 
-async function handleRequest(request: Request) {
-  const url = new URL(request.url)
-  const hostname = url.searchParams.get('proxy-host') || request.headers.get('proxy-host')
-  const port = url.searchParams.get('proxy-port') || request.headers.get('proxy-port')
-  const protocol = url.searchParams.get('proxy-protocol') || request.headers.get('proxy-protocol')
+	const [hostname, port, protocol] = [
+		sp.get("proxy-host") || reqHeaders.get("proxy-host"),
+		sp.get("proxy-port") || reqHeaders.get("proxy-port"),
+		sp.get("proxy-protocol") || reqHeaders.get("proxy-protocol"),
+	];
 
-  if (!hostname) {
-    return await fetch(md2htmlApi, { method: 'POST', body: markdownContent })
-  }
+	if (!hostname) {
+		return fetch(md2htmlApi, { method: "POST", body: markdownContent });
+	}
 
-  url.hostname = hostname || 'viki.moe'
-  url.port = port || '443'
-  url.protocol = protocol || 'https:'
+	url.hostname = hostname || "viki.moe";
+	url.port = port || "443";
+	url.protocol = protocol || "https:";
 
-  url.searchParams.delete('proxy-host')
-  url.searchParams.delete('proxy-port')
-  url.searchParams.delete('proxy-protocol')
+	sp.delete("proxy-host");
+	sp.delete("proxy-port");
+	sp.delete("proxy-protocol");
 
-  const headers = new Headers(request.headers)
+	const headers = new Headers(reqHeaders);
 
-  headers.delete('proxy-host')
-  headers.delete('proxy-port')
-  headers.delete('proxy-protocol')
+	headers.delete("proxy-host");
+	headers.delete("proxy-port");
+	headers.delete("proxy-protocol");
 
-  headers.set('Access-Control-Allow-Origin', '*')
-  headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+	headers.set("Access-Control-Allow-Origin", "*");
+	headers.set(
+		"Access-Control-Allow-Methods",
+		"GET, POST, PUT, DELETE, OPTIONS",
+	);
 
-  const res = await fetch(url.href, {
-    headers,
-    method: request.method,
-    body: request.body
-  })
-
-  return res
-}
-
-serve(handleRequest)
+	return fetch(url.href, {
+		headers,
+		method: request.method,
+		body: request.body,
+	});
+});
