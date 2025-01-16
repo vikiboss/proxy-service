@@ -12,7 +12,11 @@ Deno.serve((request: Request) => {
 	];
 
 	if (!hostname) {
+		if (url.pathname === '/favicon') {
+			return fetch('https://avatar.viki.moe');
+		}
 		return fetch(md2htmlApi, { method: "POST", body: markdownContent });
+		
 	}
 
 	url.hostname = hostname || "viki.moe";
