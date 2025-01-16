@@ -1,4 +1,4 @@
-const md2htmlApi = "https://markdown2html.deno.dev";
+const md2htmlApi = "https://60s-api.viki.moe";
 const markdownContent = await Deno.readTextFile("./README.md");
 
 Deno.serve((request: Request) => {
