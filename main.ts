@@ -45,8 +45,8 @@ Deno.serve(async (request: Request) => {
     const html = await res.text()
     return new Response(
       html.replace(/src="([^"<>]+)"/g, (_, $1) => {
-        if ($1.includes('?')) return `src='$1&proxy-host=${url.hostname}`
-        return `src='$1?proxy-host=${url.hostname}`
+        if ($1.includes('?')) return `src='${$1}&proxy-host=${url.hostname}`
+        return `src='${$1}?proxy-host=${url.hostname}`
       }),
       {
         headers: res.headers,
