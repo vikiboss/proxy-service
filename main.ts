@@ -1,6 +1,44 @@
 const md2htmlApi = "https://60s-api.viki.moe/v2/md2html";
 const markdownContent = await Deno.readTextFile("./README.md");
 
+function modifyHtml(html: string, params: URLSearchParams): string {
+  const paramString = params.toString();
+  if (!paramString) return html;
+
+  // 处理href、src属性
+  let modifiedHtml = html.replace(
+    /(<(?:a|link|img|script|iframe|source|video|audio)\s+[^>]*?\s(?:href|src)\s*=\s*["'])([^"']*)(["'])/gi,
+    (_, prefix, url, suffix) => {
+      const newUrl = appendParams(url, paramString);
+      return `${prefix}${newUrl}${suffix}`;
+    },
+  );
+
+  // 处理srcset属性
+  modifiedHtml = modifiedHtml.replace(
+    /(<(?:img|source)\s+[^>]*?\ssrcset\s*=\s*["'])([^"']*)(["'])/gi,
+    (_, prefix, srcset, suffix) => {
+      const newSrcset = srcset.split(",")
+        .map((part) => {
+          const trimmed = part.trim();
+          const [url, ...descriptors] = trimmed.split(/\s+/);
+          const newUrl = appendParams(url, paramString);
+          return descriptors.length > 0 ? `${newUrl} ${descriptors.join(" ")}` : newUrl;
+        })
+        .join(", ");
+      return `${prefix}${newSrcset}${suffix}`;
+    },
+  );
+
+  return modifiedHtml;
+}
+
+function appendParams(url: string, params: string): string {
+  if (/^(#|data:|javascript:|mailto:)/i.test(url)) return url;
+  const separator = url.includes("?") ? "&" : "?";
+  return `${url}${separator}${params}`;
+}
+
 Deno.serve(async (request: Request) => {
   const url = new URL(request.url);
   const [sp, reqHeaders] = [url.searchParams, request.headers];
@@ -12,82 +50,58 @@ Deno.serve(async (request: Request) => {
   ];
 
   if (!hostname) {
-    if (url.pathname === '/favicon.ico') {
-      return fetch('https://avatar.viki.moe');
+    if (url.pathname === "/favicon.ico") {
+      return fetch("https://avatar.viki.moe");
     }
     return fetch(md2htmlApi, { method: "POST", body: markdownContent });
   }
 
-  // 目标URL构建
-  const targetUrl = new URL(url);
-  targetUrl.hostname = hostname;
-  targetUrl.port = port || "443";
-  targetUrl.protocol = protocol || "https:";
-
-  // 清理搜索参数和请求头
+  // 构造代理URL
+  const proxyUrl = new URL(url);
+  proxyUrl.hostname = hostname;
+  proxyUrl.port = port || "443";
+  proxyUrl.protocol = protocol ? `${protocol}:` : "https:";
+  
+  // 删除代理参数，避免重复
   sp.delete("proxy-host");
   sp.delete("proxy-port");
   sp.delete("proxy-protocol");
+  proxyUrl.search = sp.toString();
 
   const headers = new Headers(reqHeaders);
   headers.delete("proxy-host");
   headers.delete("proxy-port");
   headers.delete("proxy-protocol");
   headers.set("Access-Control-Allow-Origin", "*");
-  headers.set(
-    "Access-Control-Allow-Methods",
-    "GET, POST, PUT, DELETE, OPTIONS",
-  );
+  headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
 
-  try {
-    const response = await fetch(targetUrl.href, {
-      headers,
-      method: request.method,
-      body: request.method !== 'GET' && request.method !== 'HEAD' ? request.body : null,
-      redirect: "follow",
+  // 发送代理请求
+  const proxyResponse = await fetch(proxyUrl, {
+    headers,
+    method: request.method,
+    body: request.body,
+  });
+
+  // 处理HTML内容
+  const contentType = proxyResponse.headers.get("Content-Type") || "";
+  if (contentType.includes("text/html")) {
+    const proxyParams = new URLSearchParams({
+      "proxy-host": hostname,
+      "proxy-port": port || "443",
+      "proxy-protocol": protocol || "https",
     });
-
-    const responseHeaders = new Headers(response.headers);
-    responseHeaders.set("Access-Control-Allow-Origin", "*");
-
-    // 处理HTML响应，重写相对URL
-    const contentType = response.headers.get("content-type") || "";
-    if (contentType.includes("text/html")) {
-      const originalText = await response.text();
-      // 替换相对路径的资源引用
-      const baseUrl = `${targetUrl.protocol}//${targetUrl.hostname}${targetUrl.port ? `:${targetUrl.port}` : ''}`;
-      
-      // 创建当前服务URL的基础部分(用于构建代理URL)
-      const currentOrigin = `${url.protocol}//${url.hostname}${url.port ? `:${url.port}` : ''}`;
-      
-      // 替换模式，处理不同类型的资源引用
-      const modifiedHtml = originalText
-        // 处理src属性中的绝对路径引用 (以/开头)
-        .replace(/(src|href)=(['"])\/([^'"]*)\2/gi, 
-          `$1=$2${currentOrigin}/$3$2?proxy-host=${hostname}${port ? `&proxy-port=${port}` : ''}${protocol ? `&proxy-protocol=${protocol}` : ''}`)
-        // 处理src属性中的相对路径引用 (不以/开头,也不包含http)
-        .replace(/(src|href)=(['"])(?!http|\/\/|data:|#)([^'"\/][^'"]*)\2/gi, 
-          `$1=$2${currentOrigin}/$3$2?proxy-host=${hostname}${port ? `&proxy-port=${port}` : ''}${protocol ? `&proxy-protocol=${protocol}` : ''}&/${url.pathname.split('/').slice(0, -1).join('/')}`)
-        // 处理绝对URL但未指定协议的情况 (以//开头)
-        .replace(/(src|href)=(['"])\/\/([^'"]*)\2/gi, 
-          (match, p1, p2, p3) => `${p1}=${p2}${protocol || 'https:'}//${p3}${p2}`);
-      
-      // 插入base标签确保其他相对路径正确解析
-      const baseTagHtml = `<base href="${baseUrl}/">`;
-      const modifiedHtmlWithBase = modifiedHtml.replace(/<head>/i, `<head>${baseTagHtml}`);
-      
-      return new Response(modifiedHtmlWithBase, {
-        status: response.status,
-        headers: responseHeaders,
-      });
-    }
-
-    // 非HTML内容直接返回
-    return new Response(response.body, {
-      status: response.status,
-      headers: responseHeaders,
+    
+    const html = await proxyResponse.text();
+    const modifiedHtml = modifyHtml(html, proxyParams);
+    
+    const newHeaders = new Headers(proxyResponse.headers);
+    newHeaders.set("Content-Length", String(new TextEncoder().encode(modifiedHtml).byteLength));
+    
+    return new Response(modifiedHtml, {
+      headers: newHeaders,
+      status: proxyResponse.status,
     });
-  } catch (error) {
-    return new Response(`代理请求错误: ${error.message}`, { status: 500 });
   }
+
+  return proxyResponse;
 });
