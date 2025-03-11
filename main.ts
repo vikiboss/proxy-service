@@ -64,10 +64,10 @@ Deno.serve(async (request: Request) => {
       const modifiedHtml = originalText
         // 处理src属性中的绝对路径引用 (以/开头)
         .replace(/(src|href)=(['"])\/([^'"]*)\2/gi, 
-          `$1=$2${currentOrigin}?proxy-host=${hostname}${port ? `&proxy-port=${port}` : ''}${protocol ? `&proxy-protocol=${protocol}` : ''}&/$3$2`)
+          `$1=$2${currentOrigin}/$3$2?proxy-host=${hostname}${port ? `&proxy-port=${port}` : ''}${protocol ? `&proxy-protocol=${protocol}` : ''}`)
         // 处理src属性中的相对路径引用 (不以/开头,也不包含http)
         .replace(/(src|href)=(['"])(?!http|\/\/|data:|#)([^'"\/][^'"]*)\2/gi, 
-          `$1=$2${currentOrigin}?proxy-host=${hostname}${port ? `&proxy-port=${port}` : ''}${protocol ? `&proxy-protocol=${protocol}` : ''}&/${url.pathname.split('/').slice(0, -1).join('/')}/$3$2`)
+          `$1=$2${currentOrigin}/$3$2?proxy-host=${hostname}${port ? `&proxy-port=${port}` : ''}${protocol ? `&proxy-protocol=${protocol}` : ''}&/${url.pathname.split('/').slice(0, -1).join('/')}`)
         // 处理绝对URL但未指定协议的情况 (以//开头)
         .replace(/(src|href)=(['"])\/\/([^'"]*)\2/gi, 
           (match, p1, p2, p3) => `${p1}=${p2}${protocol || 'https:'}//${p3}${p2}`);
