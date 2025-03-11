@@ -43,7 +43,11 @@ Deno.serve(async (request: Request) => {
 
   if (res.headers.get('content-type')?.includes('text/html')) {
     const html = await res.text()
-    return new Response(html.replace(/src="([^"]+)"/g, `src='$1?proxy-host=${url.hostname}`))
+    return new Response(html.replace(/src="([^"]+)"/g, `src='$1?proxy-host=${url.hostname}`), {
+      headers: res.headers,
+      status: res.status,
+      statusText: res.statusText,
+    })
   }
 
   return res
