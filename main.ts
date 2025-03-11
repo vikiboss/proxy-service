@@ -70,7 +70,7 @@ Deno.serve(async (request: Request) => {
           `$1=$2${currentOrigin}?proxy-host=${hostname}${port ? `&proxy-port=${port}` : ''}${protocol ? `&proxy-protocol=${protocol}` : ''}&/${url.pathname.split('/').slice(0, -1).join('/')}/$3$2`)
         // 处理绝对URL但未指定协议的情况 (以//开头)
         .replace(/(src|href)=(['"])\/\/([^'"]*)\2/gi, 
-          `$1=$2${protocol || 'https:'}//\3$2`);
+          (match, p1, p2, p3) => `${p1}=${p2}${protocol || 'https:'}//${p3}${p2}`);
       
       // 插入base标签确保其他相对路径正确解析
       const baseTagHtml = `<base href="${baseUrl}/">`;
