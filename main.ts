@@ -39,13 +39,25 @@ Deno.serve((request: Request) => {
     headers.set('referer', referrer)
   }
 
-  headers.set('Access-Control-Allow-Origin', '*')
-  headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-
   return fetch(url.href, {
     headers,
     method: request.method,
     body: request.body,
     redirect: 'follow',
+  }).then(response => {
+    const responseHeaders = new Headers(response.headers)
+
+    responseHeaders.set('Access-Control-Allow-Origin', '*')
+    responseHeaders.set('Access-Control-Allow-Methods', 'GET, POST, PUT, HEAD, DELETE, OPTIONS')
+    responseHeaders.set(
+      'Access-Control-Allow-Headers',
+      request.headers.get('Access-Control-Request-Headers') || '*',
+    )
+
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: responseHeaders,
+    })
   })
 })
