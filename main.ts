@@ -5,6 +5,20 @@ Deno.serve((request: Request) => {
   const url = new URL(request.url)
   const [sp, reqHeaders] = [url.searchParams, request.headers]
 
+  // 处理 OPTIONS 预检请求
+  if (request.method === 'OPTIONS') {
+    const responseHeaders = new Headers()
+    responseHeaders.set('Access-Control-Allow-Origin', '*')
+    responseHeaders.set('Access-Control-Allow-Methods', 'GET, POST, PUT, HEAD, DELETE, OPTIONS')
+    responseHeaders.set('Access-Control-Allow-Headers', reqHeaders.get('Access-Control-Request-Headers') || '*')
+    responseHeaders.set('Access-Control-Max-Age', '86400') // 缓存预检响应24小时
+
+    return new Response(null, {
+      status: 200,
+      headers: responseHeaders,
+    })
+  }
+
   const [hostname, port, protocol, referrer] = [
     sp.get('proxy-host') || reqHeaders.get('proxy-host'),
     sp.get('proxy-port') || reqHeaders.get('proxy-port'),
